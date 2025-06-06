@@ -1,3 +1,5 @@
+## finds s&p stocks that are near their 52 week lows
+
 i would probably run this in a virtual environment
 
 ```bash
@@ -18,5 +20,5 @@ pip install yfinance
 
 then run the script
 ```bash
-python 52lows.py`
+python 52lows.py
 ```
