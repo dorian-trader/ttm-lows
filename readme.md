@@ -1,6 +1,6 @@
 ## finds s&p stocks that are near their 52 week lows
 
-do this in linux. if you dont have linux, use wsl otherwise line endings will be stupid.
+### development stuff
 
 install requirements
 ```bash
@@ -12,7 +12,11 @@ then run the script to find stocks that are near their 52 week lows
 python 52lows.py
 ```
 
-if you have a discord bot, add a local .env file with your bot token and channel id
+### run and post to discord
+
+do this in linux. if you dont have linux, use wsl otherwise line endings will be stupid.
+
+add a local `.env` file with your bot token and channel id
 ```bash
 DISCORD_BOT_TOKEN=your_discord_bot_token
 DISCORD_CHANNEL_ID=your_discord_channel_id
@@ -21,6 +25,9 @@ ENVIRONMENT=local
 
 and run the bot (which will run 52lows)
 ```bash
+set -a
+source .env
+set +a
 python bot.py
 ```
 

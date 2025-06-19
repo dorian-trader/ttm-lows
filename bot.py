@@ -24,7 +24,7 @@ class WeeklyClient(discord.Client):
         buffer = StringIO(result)
         file = discord.File(fp=buffer, filename="weekly_52lows.txt")
 
-        await channel.send("Full output attached:", file=file)
+        await channel.send("Stocks within 15% of 52-week lows:", file=file)
 
         await self.close()
 
