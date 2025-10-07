@@ -9,9 +9,16 @@ def get_sp500_tickers():
     Fetches the list of S&P 500 tickers from Wikipedia.
     """
     url = 'https://en.wikipedia.org/wiki/List_of_S%26P_500_companies'
-    response = requests.get(url)
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    response = requests.get(url, headers=headers)
     soup = BeautifulSoup(response.text, 'html.parser')
     table = soup.find('table', {'id': 'constituents'})
+    
+    if table is None:
+        raise Exception("Could not find the S&P 500 constituents table on Wikipedia")
+    
     tickers = []
     for row in table.find_all('tr')[1:]:
         ticker = row.find_all('td')[0].text.strip()

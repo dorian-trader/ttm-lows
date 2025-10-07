@@ -1,2 +1,41 @@
+# Python virtual environment
 venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Environment files
 .env
+.env.*
+
+# Git
+.git/
+.gitignore
+
+# News bot related files (not needed for 52lows functionality)
+news_bot.py
+news_send.py
+newsfeed.bak
+newsfeed.log
+*news*
+
+# Documentation
+readme.md
+README.md
+
+# IDE/Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp

@@ -52,10 +52,15 @@ async def run_script_async():
     else:
         script_path = f"/app/{script}"
     
+    # Ensure absolute path for all environments to avoid working directory issues
+    if not script_path.startswith('/'):
+        script_path = f"/app/{script_path}"
+    
     proc = await asyncio.create_subprocess_exec(
         "python", script_path,
         stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.PIPE
+        stderr=asyncio.subprocess.PIPE,
+        cwd="/app"  # Explicitly set working directory
     )
     stdout, stderr = await proc.communicate()
     if proc.returncode != 0:
