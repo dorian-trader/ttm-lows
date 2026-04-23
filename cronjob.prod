@@ -2,5 +2,5 @@ SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 
 # PROD cadence:
-# - 52-week lows report: Sundays at 22:00
-0 22 * * 0 /usr/local/bin/python /app/bot.py >> /var/log/cron.log 2>&1
+# - 52-week lows report: Mon-Fri at 13:30 UTC (~9:30am ET during DST)
+30 13 * * 1-5 /usr/local/bin/python /app/bot.py >> /var/log/cron.log 2>&1
