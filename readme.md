@@ -43,3 +43,9 @@ then run the docker container
 ```bash 
 docker run --env-file .env 52lows
 ```
+
+### docker environments behavior
+
+- `ENVIRONMENT=local`: run `bot.py` once, post once, container exits (no cron).
+- `ENVIRONMENT=dev`: start cron using `cronjob.dev`. (will only run test.py, not the full 52lows.py)
+- `ENVIRONMENT=prod`: start cron using `cronjob.prod`.

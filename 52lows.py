@@ -3,6 +3,8 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 import time
+import argparse
+from pathlib import Path
 
 def get_sp500_tickers():
     """
@@ -28,7 +30,10 @@ def get_sp500_tickers():
         tickers.append(ticker)
     return tickers
 
-def find_stocks_near_52_week_lows(tickers, threshold=0.10):
+def fetch_stock_metrics(tickers):
+    """
+    Fetch 1-year pricing metrics for each ticker from Yahoo Finance.
+    """
     results = []
     for i, ticker in enumerate(tickers):
         # print(f"Processing {ticker} ({i+1}/{len(tickers)})")
@@ -40,38 +45,85 @@ def find_stocks_near_52_week_lows(tickers, threshold=0.10):
             current_price = hist['Close'].iloc[-1]
             low_52wk = hist['Close'].min()
             distance = (current_price - low_52wk) / low_52wk
-            if distance <= threshold:
-                results.append({
-                    'Ticker': ticker,
-                    'Current Price': round(current_price, 2),
-                    '52-Week Low': round(low_52wk, 2),
-                    '52-Week High': round(hist['Close'].max(), 2),
-                    'Distance %': round(distance * 100, 2)
-                })
+            results.append({
+                'Ticker': ticker,
+                'Current Price': round(current_price, 2),
+                '52-Week Low': round(low_52wk, 2),
+                '52-Week High': round(hist['Close'].max(), 2),
+                'Distance %': round(distance * 100, 2)
+            })
             time.sleep(0.2)  # throttle requests
         except Exception as e:
             print(f"Error processing {ticker}: {e}")
             continue
     return results
 
-if __name__ == "__main__":
-    threshold = 0.15  # less than 15% off 52 weeks low
-    print("Fetching S&P 500 tickers...")
-    sp500_tickers = get_sp500_tickers()
-    print(f"Total tickers retrieved: {len(sp500_tickers)}")
-    print("Analyzing stocks near 52-week lows...")
-    near_lows = find_stocks_near_52_week_lows(sp500_tickers, threshold)
+def find_stocks_near_52_week_lows(metrics, threshold=0.15):
+    """
+    Filter pre-fetched metrics to stocks within threshold distance of 52-week lows.
+    """
+    max_distance_percent = threshold * 100
+    return [item for item in metrics if item['Distance %'] <= max_distance_percent]
 
-if near_lows:
-    df = pd.DataFrame(near_lows, columns=["Ticker", "Current Price", "52-Week Low", "52-Week High", "Distance %"])
-    df = df.sort_values(by='Distance %')
-    
-    print("\nStocks near 52-week lows:\n")
-    print("Stock | Current Price | 52-Week Low | 52-Week High")
-    print("------|---------------|-------------|--------------")
-    
-    for row in df.itertuples(index=False):
-        print(f"{row.Ticker:<5} | ${row._1:<13} | ${row._2:<11} | ${row._3:<12}")
-        print(f"       ↳ Distance from low: {row._4:.2f}%\n")
-else:
-    print("No stocks found within the specified threshold.")
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Find S&P 500 stocks near their 52-week lows."
+    )
+    parser.add_argument(
+        "--threshold",
+        type=float,
+        default=0.15,
+        help="Distance from 52-week low as decimal (default: 0.15 = 15%%).",
+    )
+    parser.add_argument(
+        "--save-fetches",
+        action="store_true",
+        help="Fetch live Yahoo data and save full metrics to disk cache.",
+    )
+    parser.add_argument(
+        "--load-fetches",
+        action="store_true",
+        help="Load previously saved metrics from disk cache instead of live Yahoo fetches.",
+    )
+    parser.add_argument(
+        "--cache-file",
+        default="yahoo_metrics_cache.csv",
+        help="Path to CSV cache file used by --save-fetches/--load-fetches.",
+    )
+    return parser.parse_args()
+
+if __name__ == "__main__":
+    args = parse_args()
+    cache_file = Path(args.cache_file)
+
+    if args.load_fetches:
+        if not cache_file.exists():
+            raise FileNotFoundError(
+                f"Cache file not found: {cache_file}. Run with --save-fetches first."
+            )
+        print(f"Loading cached Yahoo metrics from: {cache_file}")
+        all_metrics = pd.read_csv(cache_file).to_dict(orient="records")
+    else:
+        print("Fetching S&P 500 tickers...")
+        sp500_tickers = get_sp500_tickers()
+        print(f"Total tickers retrieved: {len(sp500_tickers)}")
+        print("Fetching live Yahoo metrics...")
+        all_metrics = fetch_stock_metrics(sp500_tickers)
+
+        if args.save_fetches:
+            pd.DataFrame(all_metrics).to_csv(cache_file, index=False, float_format="%.2f")
+            print(f"Saved Yahoo metrics cache to: {cache_file}")
+
+    print("Analyzing stocks near 52-week lows...")
+    near_lows = find_stocks_near_52_week_lows(all_metrics, args.threshold)
+
+    if near_lows:
+        df = pd.DataFrame(
+            near_lows,
+            columns=["Ticker", "Current Price", "52-Week Low", "52-Week High", "Distance %"]
+        ).sort_values(by="Distance %")
+
+        print("\nStocks near 52-week lows (CSV):")
+        print(df.to_csv(index=False, float_format="%.2f"), end="")
+    else:
+        print("No stocks found within the specified threshold.")
