@@ -1,6 +1,9 @@
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+CRON_TZ=America/New_York
 
 # PROD cadence:
-# - 52-week lows report: Mon-Fri at 13:30 UTC (~9:30am ET during DST)
-30 13 * * 1-5 /usr/local/bin/python /app/bot.py >> /var/log/cron.log 2>&1
+# - 52-week lows report: Mon-Fri at 9:30am ET during DST
+30 9 * * 1-5 /usr/local/bin/python /app/bot.py --report lows >> /var/log/cron.log 2>&1
+# - 52-week highs report: Mon-Fri at 4:00pm ET during DST
+0 16 * * 1-5 /usr/local/bin/python /app/bot.py --report highs >> /var/log/cron.log 2>&1

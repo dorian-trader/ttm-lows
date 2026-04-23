@@ -50,27 +50,42 @@ SCRIPT_MAP = {
     "prod": "52lows.py"
 }
 
+REPORT_CONFIG = {
+    "lows": {
+        "script": "52lows.py",
+        "label": "lows",
+        "attachment": "52-week-lows.csv",
+    },
+    "highs": {
+        "script": "52highs.py",
+        "label": "highs",
+        "attachment": "52-week-highs.csv",
+    },
+}
+
 class WeeklyClient(discord.Client):
-    def __init__(self, script_args=None, **kwargs):
+    def __init__(self, report_type="lows", script_args=None, **kwargs):
         super().__init__(**kwargs)
+        self.report_type = report_type
         self.script_args = script_args or []
 
     async def on_ready(self):
         channel = self.get_channel(CHANNEL_ID)
-        result = await run_script_async(self.script_args)
+        result = await run_script_async(self.report_type, self.script_args)
         csv_text = extract_csv_text(result)
         total_rows = count_csv_data_rows(csv_text)
         preview_limit = 10
         preview = build_tsv_preview(csv_text, max_rows=preview_limit)
         shown_rows = min(preview_limit, total_rows)
+        report_label = REPORT_CONFIG[self.report_type]["label"]
         file = discord.File(
             fp=BytesIO(csv_text.encode("utf-8")),
-            filename="52-week-lows.csv"
+            filename=REPORT_CONFIG[self.report_type]["attachment"],
         )
 
         await channel.send(
             content=(
-                f"Showing top {shown_rows} of {total_rows} tickers near 52-week lows.\n"
+                f"Showing top {shown_rows} of {total_rows} tickers near 52-week {report_label}.\n"
                 "Full results are in the attached CSV.\n"
                 f"```text\n{preview}\n```"
             ),
@@ -126,8 +141,11 @@ def count_csv_data_rows(csv_text):
         return 0
     return max(len(rows) - 1, 0)
 
-async def run_script_async(script_args):
-    script = SCRIPT_MAP.get(ENVIRONMENT, "52lows.py")
+async def run_script_async(report_type, script_args):
+    default_script = REPORT_CONFIG.get(report_type, REPORT_CONFIG["lows"])["script"]
+    script = SCRIPT_MAP.get(ENVIRONMENT, default_script)
+    if ENVIRONMENT in {"local", "prod"}:
+        script = default_script
     if ENVIRONMENT == "local":
         script_path = str(BASE_DIR / script)
         cwd = str(BASE_DIR)
@@ -150,7 +168,13 @@ async def run_script_async(script_args):
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Run 52-week-low report bot and forward args to underlying report script."
+        description="Run 52-week report bot and forward args to underlying report script."
+    )
+    parser.add_argument(
+        "--report",
+        choices=sorted(REPORT_CONFIG.keys()),
+        default=os.getenv("REPORT_TYPE", "lows"),
+        help="Report type to publish (default: lows, or REPORT_TYPE env var).",
     )
     known_args, script_args = parser.parse_known_args()
     return known_args, script_args
@@ -159,6 +183,10 @@ intents = discord.Intents.default()
 intents.guilds = True
 intents.messages = True
 
-_, forwarded_script_args = parse_args()
-client = WeeklyClient(script_args=forwarded_script_args, intents=intents)
+parsed_args, forwarded_script_args = parse_args()
+client = WeeklyClient(
+    report_type=parsed_args.report,
+    script_args=forwarded_script_args,
+    intents=intents,
+)
 client.run(TOKEN)

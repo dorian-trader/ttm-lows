@@ -1,51 +1,78 @@
-## finds s&p stocks that are near their 52 week lows
+## 52-week lows/highs Discord bot
 
-### development stuff
+Small runbook for running reports and debugging different execution modes.
 
-install requirements
+## Quick setup
+
+Install dependencies:
+
 ```bash
-pip install yfinance discord
+pip install yfinance discord.py pandas beautifulsoup4 requests
 ```
 
-then run the script to find stocks that are near their 52 week lows
-```bash
-python 52lows.py
-```
+Create `.env` (used by local and Docker runs):
 
-### run and post to discord
-
-do this in linux. if you dont have linux, use wsl otherwise line endings will be stupid.
-
-add a local `.env` file with your bot token and channel id
 ```bash
 DISCORD_BOT_TOKEN=your_discord_bot_token
 DISCORD_CHANNEL_ID=your_discord_channel_id
 ENVIRONMENT=local
 ```
 
-and run the bot (which will run 52lows)
+Optional:
+
+- `REPORT_TYPE=lows|highs` (used when `--report` is not passed)
+
+## Run report scripts directly (no Discord)
+
 ```bash
-set -a
-source .env
-set +a
-python bot.py
+python 52lows.py
+python 52highs.py
 ```
 
-## docker stuff
-_note: this needs valid .env file to run_
+## Run bot locally (one-shot, post once)
 
-build the docker image
+Low report:
+
+```bash
+python bot.py --report lows
+```
+
+High report:
+
+```bash
+python bot.py --report highs
+```
+
+If you omit `--report`, bot uses `REPORT_TYPE` env var (default: `lows`).
+
+## Docker
+
+Build:
+
 ```bash
 docker build -t 52lows .
 ```
 
-then run the docker container
-```bash 
-docker run --env-file .env 52lows
+### Docker one-shot (best for debugging a single job)
+
+Highs only:
+
+```bash
+docker run --rm --env-file .env -e ENVIRONMENT=local -e REPORT_TYPE=highs 52lows
 ```
 
-### docker environments behavior
+Lows only:
 
-- `ENVIRONMENT=local`: run `bot.py` once, post once, container exits (no cron).
-- `ENVIRONMENT=dev`: start cron using `cronjob.dev`. (will only run test.py, not the full 52lows.py)
-- `ENVIRONMENT=prod`: start cron using `cronjob.prod`.
+```bash
+docker run --rm --env-file .env -e ENVIRONMENT=local -e REPORT_TYPE=lows 52lows
+```
+
+### Docker cron modes
+
+- `ENVIRONMENT=dev`: runs `cronjob.dev` (uses `test.py`, debug payload only)
+- `ENVIRONMENT=prod`: runs `cronjob.prod` (real schedules)
+
+Current prod cron schedule:
+
+- 52-week lows: Mon-Fri `13:30 UTC`
+- 52-week highs: Mon-Fri `16:00 America/New_York`
